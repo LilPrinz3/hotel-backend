@@ -33,6 +33,60 @@ export const initiatePayment = async (req, res) => {
   }
 };
 
+const sendBookingEmails = async (booking) => {
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
+
+  try {
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: booking.email,
+      subject: "Booking Confirmation",
+      html: `
+        <h2>Booking Confirmed</h2>
+        <p>Hello ${booking.name},</p>
+        <p>Your booking for <strong>${booking.roomName}</strong> has been confirmed.</p>
+        <p><b>Check-in:</b> ${booking.checkIn}</p>
+        <p><b>Check-out:</b> ${booking.checkOut}</p>
+        <p>Thank you for choosing our service!</p>
+      `
+    });
+
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER,
+      subject: "New Booking Received",
+      html: `
+        <h2>New Booking Received</h2>
+        <p>${booking.name} booked ${booking.roomName}</p>
+        <p>Email: ${booking.email}</p>
+      `
+    });
+
+
+    console.log("Booking emails sent");
+
+  } catch (error) {
+    console.log("Email error:", error.message);
+  }
+
+};
+
+
 export const verifyPayment = async (req, res) => {
   console.log("verifyPayment hit");
   const { reference } = req.query;
@@ -61,7 +115,7 @@ export const verifyPayment = async (req, res) => {
     console.log("Metadata:");
     console.log(data.metadata);
     const bookingData = data.metadata;
-    
+
     // CHECK IF SAME USER ALREDY BOOKED THE ROOM FOR THE SAME DATES
     const userExistingBooking = await Booking.findOne({
       $or: [
@@ -84,7 +138,7 @@ export const verifyPayment = async (req, res) => {
     const room = await Room.findById(bookingData.roomId);
 
     if (!room) {
-     return res.status(404).json({ message: "Room not found" });
+      return res.status(404).json({ message: "Room not found" });
     }
 
     const nights =
@@ -119,10 +173,10 @@ export const verifyPayment = async (req, res) => {
     const existingBooking = await Booking.findOne({
       paymentReference: reference,
     });
-   
+
 
     if (existingBooking) {
-      return res.redirect (
+      return res.redirect(
         `http://localhost:5173/payment-complete/${existingBooking._id}`
       );
     }
@@ -134,49 +188,11 @@ export const verifyPayment = async (req, res) => {
       paymentStatus: "paid",
     });
 
-     // EMAIL CONFIG
-        const transporter = nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-          },
-        });
-    
-        try {
-          // SEND CONFIRMATION EMAIL TO USER
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: booking.email,
-            subject: "Booking Confirmation",
-            html: `
-            <h2>Booking Confirmed</h2>
-            <p>Hello ${booking.name},</p>
-            <p>Your booking for <strong>${booking.roomName}</strong> has been confirmed.</p>
-            <p><b>Check-in:</b> ${booking.checkIn}</p>
-            <p><b>Check-out:</b> ${booking.checkOut}</p>
-            <br/>
-            <p>Thank you for choosing our service!</p>`
-          });
-    
-          // NOTIFY ADMIN OF NEW BOOKING
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.EMAIL_USER,
-            subject: "New Booking Received",
-            html: `
-            <h2>New Booking Received</h2>
-            <p>A new booking has been received from <strong>${booking.name}</strong> (${booking.email}).</p>
-            <p>Room: ${booking.roomName}</p>
-            <p>Check-in: ${booking.checkIn}</p>
-            <p>Check-out: ${booking.checkOut}</p>
-            `
-          });
-    
-        } catch (emailError) {
-          console.log("Email error:", emailError.message);
-        }
-     console.log("Booking saved!", booking._id);
+
+    sendBookingEmails(booking).catch((error) => {
+      console.log("Background email error:", error.message);
+    });
+
 
     return res.redirect(
       `http://localhost:5173/payment-complete/${booking._id}`
