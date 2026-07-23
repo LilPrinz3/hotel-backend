@@ -15,7 +15,7 @@ export const initiatePayment = async (req, res) => {
         email,
         amount: totalPrice * 100, // convert to kobo
         metadata: req.body, // pass the entire request body as metadata
-        callback_url: "http://localhost:5000/api/payments/verify"
+        callback_url: "https://hotel-backend-zo8h.onrender.com/api/payments/verify"
       },
       {
         headers: {
