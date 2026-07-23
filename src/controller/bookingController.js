@@ -168,7 +168,7 @@ export const cancelBooking = async (req, res) => {
     await booking.save();
 
     // Send cancellation email
-    sendsendCancellationEmail(booking).catch((error) => {
+    sendCancellationEmail(booking).catch((error) => {
       console.log("Cancellation email error:", error.message);
     });
 
@@ -206,7 +206,7 @@ export const updateBookingStatus = async (req, res) => {
         console.log("Cancellation email error:", error.message);
       });
     }
-    
+
     res.json({
       message: "Booking status updated successfully", booking
     })
