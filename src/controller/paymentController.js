@@ -1,10 +1,11 @@
+import dns from "dns";
+
+dns.setDefaultResultOrder("ipv4first");
 import axios from "axios";
 import Booking from "../models/Booking.js";
 import Room from "../models/Room.js";
 import nodemailer from "nodemailer";
-import dns from "dns";
 
-dns.setDefaultResultOrder("ipv4first");
 
 export const initiatePayment = async (req, res) => {
   //  console.log("initiatePayment hit"); 
@@ -49,6 +50,7 @@ const sendBookingEmails = async (booking) => {
     tls: {
       rejectUnauthorized: false,
     },
+    family: 4, // Use IPv4
   });
 
 
