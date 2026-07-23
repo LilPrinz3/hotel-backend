@@ -1,5 +1,5 @@
 import Booking from "../models/Booking.js";
-import nodemailer from "nodemailer";
+import { sendCancellationEmail } from "../utils/email.js";
 
 export const checkAvailability = async (req, res) => {
   try {
@@ -167,43 +167,12 @@ export const cancelBooking = async (req, res) => {
     booking.status = "cancelled";
     await booking.save();
 
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-      // NOTIFY USER OF CANCELLATION
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: booking.email,
-        subject: "Booking Cancelled",
-        html: `
-        <h2>Booking Cancelled</h2>
-        <p>Hello ${booking.name},</p>
-        <p>Your booking for <strong>${booking.roomName}</strong> has been cancelled.</p>
-        <p><b>Check-in:</b> ${booking.checkIn}</p>
-        <p><b>Check-out:</b> ${booking.checkOut}</p>
-        <br/>
-        <p>We hope to see you again!</p>`
-      });
+    // Send cancellation email
+    sendsendCancellationEmail(booking).catch((error) => {
+      console.log("Cancellation email error:", error.message);
+    });
 
-      // NOTIFY ADMIN OF CANCELLATION
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER,
-        subject: "Booking Cancelled",
-        html: `
-        <h2>Booking Cancelled</h2>
-        <p><strong>${booking.name}</strong> has cancelled a booking.</p>
-        <p>Email: ${booking.email}</p>
-        <p>Room: ${booking.roomName}</p>`
-      });
-    } catch (emailError) {
-      console.log("Email error:", emailError.message);
-    }
+    
     res.json({
       message: "Booking cancelled successfully, Email confirmation sent",
       booking,
@@ -233,58 +202,11 @@ export const updateBookingStatus = async (req, res) => {
 
     // Send email notification to user about status update
     if (status === "cancelled") {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
+      sendCancellationEmail(booking).catch((error) => {
+        console.log("Cancellation email error:", error.message);
       });
-
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: booking.email,
-
-
-        subject: "Your Booking Has Been Cancelled",
-
-        html: `
-
-                <h2>Booking Cancelled</h2>
-
-                <p>Hello ${booking.name},</p>
-
-
-                <p>
-                We regret to inform you that your booking for 
-                <strong>${booking.roomName}</strong>
-                has been cancelled due to technical or operational reasons.
-                </p>
-
-
-                <p>
-                If payment has already been made, we will process your refund
-                or contact you regarding alternative available dates.
-                </p>
-
-
-                <p>
-                We sincerely apologize for the inconvenience and appreciate your understanding.
-                </p>
-
-
-                <br/>
-
-                <p>
-                Regards,<br/>
-                Hotel Management
-                </p>
-
-                `
-      });
-
     }
-
+    
     res.json({
       message: "Booking status updated successfully", booking
     })

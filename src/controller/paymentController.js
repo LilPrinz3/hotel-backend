@@ -1,11 +1,7 @@
-import dns from "dns";
-
-dns.setDefaultResultOrder("ipv4first");
 import axios from "axios";
 import Booking from "../models/Booking.js";
 import Room from "../models/Room.js";
-import nodemailer from "nodemailer";
-
+import { sendBookingConfirmationEmail } from "../utils/email.js";
 
 export const initiatePayment = async (req, res) => {
   //  console.log("initiatePayment hit"); 
@@ -36,61 +32,6 @@ export const initiatePayment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-const sendBookingEmails = async (booking) => {
-
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    family: 4, // Use IPv4
-  });
-
-
-  try {
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: booking.email,
-      subject: "Booking Confirmation",
-      html: `
-        <h2>Booking Confirmed</h2>
-        <p>Hello ${booking.name},</p>
-        <p>Your booking for <strong>${booking.roomName}</strong> has been confirmed.</p>
-        <p><b>Check-in:</b> ${booking.checkIn}</p>
-        <p><b>Check-out:</b> ${booking.checkOut}</p>
-        <p>Thank you for choosing our service!</p>
-      `
-    });
-
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: "New Booking Received",
-      html: `
-        <h2>New Booking Received</h2>
-        <p>${booking.name} booked ${booking.roomName}</p>
-        <p>Email: ${booking.email}</p>
-      `
-    });
-
-
-    console.log("Booking emails sent");
-
-  } catch (error) {
-    console.log("Email error:", error.message);
-  }
-
-};
-
 
 export const verifyPayment = async (req, res) => {
   console.log("verifyPayment hit");
@@ -194,7 +135,7 @@ export const verifyPayment = async (req, res) => {
     });
 
 
-    sendBookingEmails(booking).catch((error) => {
+    sendBookingConfirmationEmail(booking).catch((error) => {
       console.log("Background email error:", error.message);
     });
 
